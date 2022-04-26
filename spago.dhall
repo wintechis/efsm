@@ -17,7 +17,6 @@ to generate this file without the comments in this block.
   , "effect"
   , "httpure"
   , "maybe"
-  , "ordered-collections"
   , "prelude"
   , "transformers"
   , "tuples"
