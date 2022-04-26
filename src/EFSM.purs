@@ -53,11 +53,9 @@ d = Input "D"
 p :: Output
 p = Output "P"
 
-data Pos = Pos1 | Pos2 | Pos3
+newtype Pos = Pos Int
 instance showPos :: Show Pos where
-  show Pos1 = "1"
-  show Pos2 = "2"
-  show Pos3 = "3"
+  show (Pos pos) = show pos
 
 newtype Closed = Closed Boolean
 instance showClosed :: Show Closed where
@@ -72,10 +70,7 @@ instance showAssignment :: Show Assignment where
   show (Assignment pos closed item) = "(" <> show pos <> ", " <> show closed <> ", " <> show item <> ")"
 
 ass :: Int -> Boolean -> Boolean -> Assignment
-ass 1 closed item = Assignment Pos1 (Closed closed) (Item item)
-ass 2 closed item = Assignment Pos2 (Closed closed) (Item item)
-ass 3 closed item = Assignment Pos3 (Closed closed) (Item item)
-ass _ closed item = Assignment Pos1 (Closed closed) (Item item)
+ass pos closed item = Assignment (Pos pos) (Closed closed) (Item item)
 
 type EnablingFunction = Assignment -> Boolean
 
@@ -91,13 +86,13 @@ f3 :: EnablingFunction
 f3 (Assignment _ (Closed v) _) = not v
 
 u1 :: UpdateFunction
-u1 (Assignment _ closed item) = Assignment Pos1 closed item
+u1 (Assignment _ closed item) = Assignment (Pos 1) closed item
 
 u2 :: UpdateFunction
-u2 (Assignment _ closed item) = Assignment Pos2 closed item
+u2 (Assignment _ closed item) = Assignment (Pos 2) closed item
 
 u3 :: UpdateFunction
-u3 (Assignment _ closed item) = Assignment Pos3 closed item
+u3 (Assignment _ closed item) = Assignment (Pos 3) closed item
 
 u4 :: UpdateFunction
 u4 (Assignment pos closed _) = Assignment pos closed (Item true)
@@ -106,7 +101,7 @@ u5 :: UpdateFunction
 u5 (Assignment pos closed _) = Assignment pos closed (Item false)
 
 u6 :: UpdateFunction
-u6 (Assignment _ closed _) = Assignment Pos2 closed (Item false)
+u6 (Assignment _ closed _) = Assignment (Pos 2) closed (Item false)
 
 data Transition = Transition SymbolicState EnablingFunction (Maybe Input) SymbolicState (Assignment -> Assignment) (Maybe Output)
 
@@ -135,12 +130,12 @@ ts = [
 type AdmissibilityFunction = SymbolicState -> Assignment -> Boolean
 
 a1 :: AdmissibilityFunction
-a1 (SymbolicState "s0") (Assignment Pos1 _ (Item false)) = true
-a1 (SymbolicState "s1") (Assignment Pos2 _ (Item false)) = true
-a1 (SymbolicState "s2") (Assignment Pos3 _ (Item false)) = true
-a1 (SymbolicState "s3") (Assignment Pos1 _ (Item true)) = true
-a1 (SymbolicState "s4") (Assignment Pos2 _ (Item true)) = true
-a1 (SymbolicState "s5") (Assignment Pos3 _ (Item true)) = true
+a1 (SymbolicState "s0") (Assignment (Pos 1) _ (Item false)) = true
+a1 (SymbolicState "s1") (Assignment (Pos 2) _ (Item false)) = true
+a1 (SymbolicState "s2") (Assignment (Pos 3) _ (Item false)) = true
+a1 (SymbolicState "s3") (Assignment (Pos 1) _ (Item true)) = true
+a1 (SymbolicState "s4") (Assignment (Pos 2) _ (Item true)) = true
+a1 (SymbolicState "s5") (Assignment (Pos 3) _ (Item true)) = true
 a1 _ _ = false
 
 data EFSM = EFSM Transitions AdmissibilityFunction
