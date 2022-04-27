@@ -3,7 +3,7 @@ module EFSM where
 import Prelude
 
 import Control.Monad.State (State, get, put)
-import Data.Array (concatMap, find)
+import Data.Array (concatMap, find, mapMaybe)
 import Data.Maybe (Maybe(..))
 import Data.Set (Set, fromFoldable)
 import Data.Tuple (Tuple(..))
@@ -49,9 +49,21 @@ data EFSM a = EFSM (Transitions a) (AdmissibilityFunction a)
 stateSet :: forall a. EFSM a -> Set SymbolicState
 stateSet (EFSM transitions _) = fromFoldable $ concatMap (\(Transition oldS _ _ newS _ _) -> [oldS, newS]) transitions
 
-type EFSMState a = Tuple SymbolicState (Variables a)
+inputSet :: forall a. EFSM a -> Set Input
+inputSet (EFSM transitions _) = fromFoldable $ mapMaybe (\(Transition _ _ i _ _ _) -> i) transitions
 
-updateVariables :: forall a. EFSM a -> Variables a -> State (EFSMState a) Boolean
+outputSet :: forall a. EFSM a -> Set Output
+outputSet (EFSM transitions _) = fromFoldable $ mapMaybe (\(Transition _ _ _ _ _ o) -> o) transitions
+
+enablingFunctionSet :: forall a. EFSM a -> Array (EnablingFunction a)
+enablingFunctionSet (EFSM transitions _) = map (\(Transition _ f _ _ _ _) -> f) transitions
+
+updateFunctionSet :: forall a. EFSM a -> Array (UpdateFunction a)
+updateFunctionSet (EFSM transitions _) = map (\(Transition _ _ _ _ u _) -> u) transitions
+
+type EFSMConfig a = Tuple SymbolicState (Variables a)
+
+updateVariables :: forall a. EFSM a -> Variables a -> State (EFSMConfig a) Boolean
 updateVariables (EFSM _ adm) newAss = do
   Tuple ss _ <- get
   let admitted = adm ss newAss
@@ -60,7 +72,7 @@ updateVariables (EFSM _ adm) newAss = do
     pure true
   else pure false
 
-processInput :: forall a. EFSM a -> Input -> State (EFSMState a) (Maybe Output)
+processInput :: forall a. EFSM a -> Input -> State (EFSMConfig a) (Maybe Output)
 processInput (EFSM trs _) inp = do
   Tuple ss as <- get
   let t = findTransition as trs inp ss

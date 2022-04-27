@@ -6,7 +6,7 @@ import Control.Monad.State (runState)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import EFSM (AdmissibilityFunction, EFSM(..), EnablingFunction, Input(..), Output(..), SymbolicState(..), Transitions, UpdateFunction, processInput, stateSet, updateVariables, (==>))
+import EFSM (AdmissibilityFunction, EFSM(..), EnablingFunction, Input(..), Output(..), SymbolicState(..), Transitions, UpdateFunction, inputSet, processInput, updateVariables, (==>))
 import Effect (Effect)
 import Effect.Console (logShow)
 
@@ -102,7 +102,7 @@ e = EFSM ts a1
 
 main :: Effect Unit
 main = do
-  logShow $ stateSet e
+  logShow $ inputSet e
   logShow $ runState (updateVariables e { pos: 1, closed: true, item: false }) (Tuple s0 { pos: 1, closed: false, item: false })
   logShow $ runState (updateVariables e { pos: 2, closed: true, item: false }) (Tuple s0 { pos: 1, closed: false, item: false })
   logShow $ runState (processInput e a) (Tuple s0 { pos: 1, closed: false, item: false})
