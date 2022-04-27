@@ -17,7 +17,7 @@ getAssignment (Assignment pos item closed) = ok' (header "Content-Type" "text/tu
 """)
 
 router :: Request -> ResponseM
-router { path: [] } = getAssignment (Assignment Pos1 (Closed false) (Item false))
+router { path: [] } = getAssignment (Assignment (Pos 1) (Closed false) (Item false))
 router { path: ["hi", "ho"] } = ok' (header "Content-Type" "text/turtle") "<> a <http://example.org/Bla> ."
 router _ = ok "default"
 
