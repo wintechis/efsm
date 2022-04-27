@@ -1,11 +1,29 @@
-module RDF where
+module RDF (
+  Term,
+  Quad,
+  Graph,
+  namedNode,
+  blankNode,
+  literalType,
+  literalLang,
+  variable,
+  defaultGraph,
+  quad,
+  triple,
+  termType,
+  value,
+  language,
+  datatype,
+  subject,
+  predicate,
+  object,
+  graph
+) where
 
 import Prelude
 
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..))
 import Data.Set (Set)
-import Effect (Effect)
-import Effect.Class.Console (logShow)
 
 data Term = NamedNode String | BlankNode String | LiteralLang String String | LiteralType String Term | Variable String | DefaultGraph
 derive instance eqTerm :: Eq Term
@@ -33,12 +51,11 @@ namedNode s = NamedNode s
 blankNode :: String -> Term
 blankNode s = BlankNode s
 
-literalType :: String -> Term -> Maybe Term
-literalType s (NamedNode t) = Just (LiteralType s (NamedNode t))
-literalType _ _ = Nothing
+literalType :: String -> Term -> Term
+literalType s t = LiteralType s t
 
-literalLang :: String -> String -> Maybe Term
-literalLang s l = Just (LiteralLang s l)
+literalLang :: String -> String -> Term
+literalLang s l = LiteralLang s l
 
 variable :: String -> Term
 variable s = Variable s
@@ -73,12 +90,17 @@ language (LiteralLang _ l) = Just l
 language _ = Nothing
 
 datatype :: Term -> Maybe Term
-datatype (LiteralType _ (NamedNode t)) = Just (NamedNode t)
+datatype (LiteralType _ t) = Just t
 datatype _ = Nothing
 
-q :: Quad
-q = triple (namedNode "http://example.org/a") (namedNode "http://example.org/p") (fromMaybe DefaultGraph (literalType "3" (namedNode "http://www.w3.org/2001/XMLSchema#integer")))
+subject :: Quad -> Term
+subject (Quad s _ _ _) = s
 
-main :: Effect Unit
-main = do
-  logShow q
+predicate :: Quad -> Term
+predicate (Quad _ p _ _) = p
+
+object :: Quad -> Term
+object (Quad _ _ o _) = o
+
+graph :: Quad -> Term
+graph (Quad _ _ _ g) = g
