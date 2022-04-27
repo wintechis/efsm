@@ -9,10 +9,6 @@ import Data.Maybe (Maybe(..))
 import Data.Set (Set, fromFoldable)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3)
-import Effect (Effect)
-import Effect.Class.Console (logShow)
-import Record (get) as Record
-import Type.Proxy (Proxy(..))
 
 data SymbolicState = SymbolicState String
 derive instance eqSymbolicState :: Eq SymbolicState

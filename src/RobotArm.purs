@@ -12,7 +12,7 @@ import Data.Tuple.Nested ((/\))
 import EFSM (AdmissibilityFunction, EFSM(..), EnablingFunction, Input(..), Output(..), SymbolicState(..), Transitions, UpdateFunction, Variables, inputSet, processInput, updateVariables, (==>))
 import Effect (Effect)
 import Effect.Console (logShow)
-import RDF (Graph, datatype, defaultGraph, literalType, namedNode, object, predicate, subject, termType, triple, value)
+import RDF (Graph, datatype, literalType, namedNode, object, predicate, subject, termType, triple, value)
 
 -- S
 s0 :: SymbolicState
@@ -106,10 +106,10 @@ e = EFSM ts a1
 
 variablesToRdf :: Variables D -> Graph
 variablesToRdf { pos, closed, item } = fromFoldable [
-  triple defaultGraph (namedNode "http://www.w3.org/2001/XMLSchema#") (namedNode "http://example.org/RobotArm"),
-  triple defaultGraph (namedNode "http://example.org/pos") (literalType (show pos) (namedNode "http://www.w3.org/2001/XMLSchema#integer")),
-  triple defaultGraph (namedNode "http://example.org/closed") (literalType (show closed) (namedNode "http://www.w3.org/2001/XMLSchema#boolean")),
-  triple defaultGraph (namedNode "http://example.org/item") (literalType (show item) (namedNode "http://www.w3.org/2001/XMLSchema#boolean"))
+  triple (namedNode "http://localhost:8080/") (namedNode "http://www.w3.org/2001/XMLSchema#") (namedNode "http://example.org/RobotArm"),
+  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/pos") (literalType (show pos) (namedNode "http://www.w3.org/2001/XMLSchema#integer")),
+  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/closed") (literalType (show closed) (namedNode "http://www.w3.org/2001/XMLSchema#boolean")),
+  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/item") (literalType (show item) (namedNode "http://www.w3.org/2001/XMLSchema#boolean"))
 ]
 
 rdfToVariables :: Graph -> Maybe (Variables D)
@@ -123,9 +123,9 @@ rdfToVariables g = do
   pure { pos: pos, closed: closed, item: item }
   where
     getPos :: Graph -> Maybe String
-    getPos g' = value <$> object <$> find (\q -> (subject q) == defaultGraph && (predicate q) == namedNode "http://example.org/pos" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#integer")) g'
-    getClosed g' = value <$> object <$> find (\q -> (subject q) == defaultGraph && (predicate q) == namedNode "http://example.org/closed" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
-    getItem g' = value <$> object <$> find (\q -> (subject q) == defaultGraph && (predicate q) == namedNode "http://example.org/item" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
+    getPos g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/pos" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#integer")) g'
+    getClosed g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/closed" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
+    getItem g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/item" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
 
 main :: Effect Unit
 main = do

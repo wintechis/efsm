@@ -17,13 +17,15 @@ module RDF (
   subject,
   predicate,
   object,
-  graph
+  graph,
+  serialize
 ) where
 
-import Prelude
+import Prelude hiding (map)
 
+import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..))
-import Data.Set (Set)
+import Data.Set (Set, map)
 
 data Term = NamedNode String | BlankNode String | LiteralLang String String | LiteralType String Term | Variable String | DefaultGraph
 derive instance eqTerm :: Eq Term
@@ -104,3 +106,6 @@ object (Quad _ _ o _) = o
 
 graph :: Quad -> Term
 graph (Quad _ _ _ g) = g
+
+serialize :: Graph -> String
+serialize g = foldl (\q1 q2 -> q1 <> "\n" <> q2) "" $ map show g
