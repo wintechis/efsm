@@ -19,6 +19,7 @@ to generate this file without the comments in this block.
   , "maybe"
   , "ordered-collections"
   , "prelude"
+  , "record"
   , "transformers"
   , "tuples"
   ]

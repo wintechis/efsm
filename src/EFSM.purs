@@ -4,10 +4,15 @@ import Prelude
 
 import Control.Monad.State (State, get, put)
 import Data.Array (concatMap, find, mapMaybe)
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Set (Set, fromFoldable)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (Tuple3)
+import Effect (Effect)
+import Effect.Class.Console (logShow)
+import Record (get) as Record
+import Type.Proxy (Proxy(..))
 
 data SymbolicState = SymbolicState String
 derive instance eqSymbolicState :: Eq SymbolicState
@@ -81,6 +86,27 @@ processInput (EFSM trs _) inp = do
       put (Tuple snew (u as))
       pure op
     Nothing -> pure Nothing
+  where
+    findTransition as trans input sold = find (\(Transition state f inp' _ _ _) -> sold == state && (Just input) == inp' && (f as)) trans
 
-findTransition :: forall a. Variables a -> Transitions a -> Input -> SymbolicState -> Maybe (Transition a)
-findTransition as trans inp sold = find (\(Transition state f inp' _ _ _) -> sold == state && (Just inp) == inp' && (f as)) trans
+type ActionMap = Array (Tuple String (List Input))
+
+actionMap :: ActionMap
+actionMap = [
+  Tuple "http://example.org/MoveFrom1To2" (Input "A" : Nil),
+  Tuple "http://example.org/MoveFrom2To1" (Input "B" : Nil)
+]
+
+{-
+type PropertyMap a = Tuple String (Proxy a)
+
+pos_ :: Proxy "pos"
+pos_ = Proxy
+
+bla :: Int
+bla = Record.get pos_ { pos: 3}
+
+main :: Effect Unit
+main = do
+  logShow bla
+  -}
