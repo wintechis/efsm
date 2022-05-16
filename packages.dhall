@@ -103,3 +103,4 @@ let upstream =
         sha256:2523a5659d0f3b198ffa2f800da147e0120578842e492a7148e4b44f357848b3
 
 in  upstream
+  with rdfps = /home/daniel/Git/rdfps/spago.dhall as Location
