@@ -8,11 +8,12 @@ import Data.Foldable (maximum)
 import Data.List (List(..), findIndex, snoc, updateAt, (!!), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import EFSM (EFSMConfig, Input, Output, processInput, updateVariables)
+import EFSM (EFSMConfig, Input, Output, epsilon, processInput, updateVariables)
 import EFSMRDFMap (TaskState(..), armForRdf, rdfForArm, rdfForEvents, rdfForTask, rdfForTasks, taskForRdf)
 import Effect.Aff (Aff, Milliseconds(..), delay, runAff_)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
+import Effect.Random (random)
 import Effect.Ref (Ref, modify, new, read, write)
 import Effect.Timer (setTimeout)
 import HTTPure (Headers, Method(..), Request, Response, ResponseM, ServerM, badRequest, conflict, created, headers, internalServerError, noContent, notFound, ok', serve, toString, (!@))
@@ -86,6 +87,27 @@ router state { path, method: Put, body }
     makeResponse = created
 router _ _ = notFound
 
+runTasksAndEpsilons :: Ref ServerState -> Aff Unit
+runTasksAndEpsilons state = do
+  r <- liftEffect $ random
+  res <- if r < 0.5 then
+    runEpsilons state
+  else
+    runTasks state
+  _ <- liftEffect $ setTimeout 500 $ runAff_ (\_ -> pure unit) $ runTasksAndEpsilons state
+  pure res
+
+runEpsilons :: Ref ServerState -> Aff Unit
+runEpsilons state = do
+  { config, tasks, events } <- liftEffect $ read state
+  let (Tuple (Tuple success output) config') = runState (epsilon e) config
+  if success then delay $ Milliseconds 5000.0 else pure unit
+  let events' = case output of
+        Nothing -> events
+        Just o -> snoc events (Tuple (findNextEventIdx events) o)
+  liftEffect $ write { config: config', tasks: tasks, events: events' } state
+  pure unit
+
 runTasks :: Ref ServerState -> Aff Unit
 runTasks state = do
   { config, tasks, events } <- liftEffect $ read state
@@ -101,7 +123,7 @@ runTasks state = do
                 Nothing -> tasks
                 Just t -> t
           liftEffect $ write { config: config, tasks: tasks', events: events } state
-          delay $ Milliseconds 10000.0
+          delay $ Milliseconds 5000.0
           let (Tuple (Tuple success output) config') = runState (processInput e input') config
           let events' = case output of
                 Nothing -> events
@@ -111,16 +133,15 @@ runTasks state = do
                 Just t -> t
           liftEffect $ write { config: config', tasks: tasks'', events: events' } state
           pure unit
-  _ <- liftEffect $ setTimeout 500 $ runAff_ (\_ -> pure unit) $ runTasks state
   pure unit
-    where
-      findNextEventIdx :: List (Tuple Int Output) -> Int
-      findNextEventIdx events = case maximum $ map (\(Tuple i _) -> i) events of 
-        Nothing -> 0
-        Just i -> i + 1
+
+findNextEventIdx :: List (Tuple Int Output) -> Int
+findNextEventIdx events = case maximum $ map (\(Tuple i _) -> i) events of 
+  Nothing -> 0
+  Just i -> i + 1
 
 main :: ServerM
 main = do
   state <- new { config: Tuple s0 { pos: 1, closed: true, item: false }, tasks: (Tuple "task1" (Tuple a TaskFailed)) : (Tuple "task2" (Tuple b TaskFailed)) : Nil, events: Nil }
-  _ <- liftEffect $ setTimeout 500 $ runAff_ (\_ -> pure unit) $ runTasks state
+  _ <- liftEffect $ setTimeout 500 $ runAff_ (\_ -> pure unit) $ runTasksAndEpsilons state
   serve 8080 (router state) $ log "Started server at http://localhost:8080/."

@@ -85,24 +85,14 @@ processInput (EFSM trs _) inp = do
   where
     findTransition as trans input sold = find (\(Transition state f inp' _ _ _) -> sold == state && (Just input) == inp' && (f as)) trans
 
-type ActionMap = Array (Tuple String (List Input))
-
-actionMap :: ActionMap
-actionMap = [
-  Tuple "http://example.org/MoveFrom1To2" (Input "A" : Nil),
-  Tuple "http://example.org/MoveFrom2To1" (Input "B" : Nil)
-]
-
-{-
-type PropertyMap a = Tuple String (Proxy a)
-
-pos_ :: Proxy "pos"
-pos_ = Proxy
-
-bla :: Int
-bla = Record.get pos_ { pos: 3}
-
-main :: Effect Unit
-main = do
-  logShow bla
-  -}
+epsilon :: forall a. EFSM a -> State (EFSMConfig a) (Tuple Boolean (Maybe Output))
+epsilon (EFSM trs _) = do
+  Tuple ss as <- get
+  let t = findEpsilonTransition as trs ss
+  case t of
+    Just (Transition _ _ _ snew u op) -> do
+      put (Tuple snew (u as))
+      pure (Tuple true op)
+    Nothing -> pure (Tuple false Nothing)
+    where
+      findEpsilonTransition as trans sold = find (\(Transition state f inp' _ _ _) -> sold == state && Nothing == inp' && (f as)) trans
