@@ -13,6 +13,7 @@ import RDF.Prefixes (ldp, ra, rdf, xsd)
 import RobotArm (D, a, b, c, d)
 
 data TaskState = TaskAccepted | TaskRunning | TaskSuccessful | TaskFailed
+derive instance eqTaskState :: Eq TaskState
 
 rdfForArm :: String -> EFSMConfig D -> Graph
 rdfForArm base (Tuple _ { pos, closed, item }) = fromFoldable [

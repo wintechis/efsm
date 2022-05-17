@@ -73,15 +73,15 @@ updateVariables (EFSM _ adm) newAss = do
     pure true
   else pure false
 
-processInput :: forall a. EFSM a -> Input -> State (EFSMConfig a) (Maybe Output)
+processInput :: forall a. EFSM a -> Input -> State (EFSMConfig a) (Tuple Boolean (Maybe Output))
 processInput (EFSM trs _) inp = do
   Tuple ss as <- get
   let t = findTransition as trs inp ss
   case t of
     Just (Transition _ _ _ snew u op) -> do
       put (Tuple snew (u as))
-      pure op
-    Nothing -> pure Nothing
+      pure (Tuple true op)
+    Nothing -> pure (Tuple false Nothing)
   where
     findTransition as trans input sold = find (\(Transition state f inp' _ _ _) -> sold == state && (Just input) == inp' && (f as)) trans
 

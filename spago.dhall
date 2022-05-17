@@ -21,6 +21,7 @@ to generate this file without the comments in this block.
   , "foldable-traversable"
   , "httpure"
   , "integers"
+  , "js-timers"
   , "lists"
   , "maybe"
   , "ordered-collections"
