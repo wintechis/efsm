@@ -1,1 +1,1 @@
-<http://localhost:8080/tasks/task2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://solid.ti.rw.fau.de/public/ns/robotArm#MoveFrom2To3Task> .
+_:bn <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://solid.ti.rw.fau.de/public/ns/robotArm#MoveFrom2To3Task> .

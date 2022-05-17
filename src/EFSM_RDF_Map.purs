@@ -26,22 +26,22 @@ rdfForArm base (Tuple _ { pos, closed, item }) = fromFoldable [
   quad (namedNode $ base <> "#robotArm") (namedNode' ra "item") (literalType (show item) (namedNode' xsd "boolean")) defaultGraph
 ]
 
-rdfForTasks :: String -> List (Tuple String (Tuple Input TaskState)) -> Graph
+rdfForTasks :: String -> List (Tuple Int (Tuple Input TaskState)) -> Graph
 rdfForTasks base inputs = union (fromFoldable [
   quad (namedNode $ base <> "tasks/") (namedNode' rdf "type") (namedNode' ra "TaskContainer") defaultGraph
 ]) (fromFoldable $ inputsToContainsQuads base inputs)
   where
-    inputsToContainsQuads :: String -> List (Tuple String (Tuple Input TaskState)) -> List Quad
+    inputsToContainsQuads :: String -> List (Tuple Int (Tuple Input TaskState)) -> List Quad
     inputsToContainsQuads base' ((Tuple idx _) : is) =
-      (quad (namedNode $ base <> "tasks/") (namedNode' ldp "contains") (namedNode $ base <> "tasks/" <> idx) defaultGraph)
+      (quad (namedNode $ base <> "tasks/") (namedNode' ldp "contains") (namedNode $ base <> "tasks/" <> show idx) defaultGraph)
       : inputsToContainsQuads base' is
     inputsToContainsQuads _ Nil = Nil
 
-rdfForTask :: String -> Int -> Tuple String (Tuple Input TaskState) -> Graph
+rdfForTask :: String -> Int -> Tuple Int (Tuple Input TaskState) -> Graph
 rdfForTask base taskListIdx (Tuple idx (Tuple input taskState)) = fromFoldable [
-  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' rdf "type") (task input) defaultGraph,
-  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' ra "taskState") (state taskState) defaultGraph,
-  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' ra "taskNumber") (literalType (show taskListIdx) (namedNode' xsd "integer")) defaultGraph
+  quad (namedNode $ base <> "tasks/" <> show idx) (namedNode' rdf "type") (task input) defaultGraph,
+  quad (namedNode $ base <> "tasks/" <> show idx) (namedNode' ra "taskState") (state taskState) defaultGraph,
+  quad (namedNode $ base <> "tasks/" <> show idx) (namedNode' ra "taskNumber") (literalType (show taskListIdx) (namedNode' xsd "integer")) defaultGraph
 ]
   where
     task :: Input -> Term
@@ -96,8 +96,8 @@ armForRdf base g = if correctSize && correctType then do
     itemQuads = filter (\q -> subject q == (namedNode $ base <> "#robotArm") && predicate q == (namedNode' ra "item")) g
     posQuads = filter (\q -> subject q == (namedNode $ base <> "#robotArm") && predicate q == (namedNode' ra "pos")) g
 
-taskForRdf :: String -> Graph -> Maybe Input
-taskForRdf uri g = if correctSize then do
+taskForRdf :: Graph -> Maybe Input
+taskForRdf g = if correctSize then do
     guard $ size typeQuads == 1
     t <- object <$> findMax typeQuads
     guard $ termType t == "NamedNode"
@@ -110,4 +110,4 @@ taskForRdf uri g = if correctSize then do
   else Nothing
   where
     correctSize = size g == 1
-    typeQuads = filter (\q -> subject q == (namedNode uri) && predicate q == (namedNode' rdf "type")) g
+    typeQuads = filter (\q -> termType (subject q) == "BlankNode" && predicate q == (namedNode' rdf "type")) g

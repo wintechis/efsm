@@ -24,7 +24,7 @@ import RDFPS.NTriplesParser (parse)
 import RobotArm (D, e, s0)
 import Text.Parsing.Parser (parseErrorMessage)
 
-type ServerState = Record ( config :: EFSMConfig D, tasks :: List (Tuple String (Tuple Input TaskState)), events :: List (Tuple Int (Tuple DateTime Output)) )
+type ServerState = Record ( config :: EFSMConfig D, tasks :: List (Tuple Int (Tuple Input TaskState)), events :: List (Tuple Int (Tuple DateTime Output)) )
 
 baseURI :: String
 baseURI = "http://localhost:8080/"
@@ -67,7 +67,7 @@ router state { path: ["events"], method: Get } = do
 router state { path, method: Get }
   | path !@ 0 == "tasks" && not (path !@ 1 == "") = do
     { tasks } <- liftEffect $ read state
-    case findIndex (\(Tuple idx _) -> path !@ 1 == idx) tasks of 
+    case findIndex (\(Tuple idx _) -> path !@ 1 == show idx) tasks of 
       Just taskListIdx -> case tasks !! taskListIdx of
         Just task -> ok' ntHeader (serialize $ rdfForTask baseURI taskListIdx task)
         Nothing -> internalServerError $ "TaskList index " <> show taskListIdx <> " not present but should be!"
@@ -81,19 +81,20 @@ router state { path, method: Get }
         Just event -> ok' ntHeader (serialize $ rdfForEvent baseURI eventListIdx event)
         Nothing -> internalServerError $ "EventList index " <> show eventListIdx <> " not present but should be!"
       Nothing -> notFound
--- Put a task
-router state { path, method: Put, body }
-  | path !@ 0 == "tasks" && not (path !@ 1 == "") = do
+-- Post a task
+router state { path: ["tasks"], method: Post, body } = do
     b <- toString body
     let gr = parse b
     case gr of
       Left parserError -> badRequest $ parseErrorMessage parserError
       Right gr' -> do
-        let input = taskForRdf (baseURI <> "tasks/" <> path !@ 1) gr'
+        { tasks } <- liftEffect $ read state
+        let taskIdx = findNextTaskIdx tasks
+        let input = taskForRdf gr'
         case input of 
           Nothing -> badRequest "Task could not be extracted from RDF"
           Just input' -> do
-            _ <- liftEffect $ modify (\s -> { config: s.config, tasks: snoc s.tasks (Tuple (path !@ 1) (Tuple input' TaskAccepted)), events: s.events }) state
+            _ <- liftEffect $ modify (\s -> { config: s.config, tasks: snoc s.tasks (Tuple taskIdx (Tuple input' TaskAccepted)), events: s.events }) state
             makeResponse
   where
     makeResponse :: Aff Response
@@ -152,6 +153,11 @@ runTasks state = do
 
 findNextEventIdx :: List (Tuple Int (Tuple DateTime Output)) -> Int
 findNextEventIdx events = case maximum $ map (\(Tuple i _) -> i) events of 
+  Nothing -> 0
+  Just i -> i + 1
+
+findNextTaskIdx :: List (Tuple Int (Tuple Input TaskState)) -> Int
+findNextTaskIdx events = case maximum $ map (\(Tuple i _) -> i) events of 
   Nothing -> 0
   Just i -> i + 1
 

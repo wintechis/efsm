@@ -1,2 +1,2 @@
 #!/bin/sh
-curl -X PUT -H "Content-Type: application/n-triples" -d @task2.nt http://localhost:8080/tasks/2 -v
+curl -X POST -H "Content-Type: application/n-triples" -d @`dirname $0`/task2.nt http://localhost:8080/tasks/ -v
