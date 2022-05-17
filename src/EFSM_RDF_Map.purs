@@ -35,10 +35,11 @@ rdfForTasks base inputs = union (fromFoldable [
       : inputsToContainsQuads base' is
     inputsToContainsQuads _ Nil = Nil
 
-rdfForTask :: String -> Tuple String (Tuple Input TaskState) -> Graph
-rdfForTask base (Tuple idx (Tuple input taskState)) = fromFoldable [
+rdfForTask :: String -> Int -> Tuple String (Tuple Input TaskState) -> Graph
+rdfForTask base taskListIdx (Tuple idx (Tuple input taskState)) = fromFoldable [
   quad (namedNode $ base <> "tasks/" <> idx) (namedNode' rdf "type") (task input) defaultGraph,
-  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' ra "taskState") (state taskState) defaultGraph
+  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' ra "taskState") (state taskState) defaultGraph,
+  quad (namedNode $ base <> "tasks/" <> idx) (namedNode' ra "taskNumber") (literalType (show taskListIdx) (namedNode' xsd "integer")) defaultGraph
 ]
   where
     task :: Input -> Term

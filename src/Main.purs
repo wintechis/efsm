@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.State (runState)
 import Data.Either (Either(..))
 import Data.Foldable (maximum)
-import Data.List (List(..), find, (:))
+import Data.List (List(..), findIndex, (!!), (:))
 import Data.Maybe (Maybe(..))
 import Data.Set (fromFoldable)
 import Data.Tuple (Tuple(..))
@@ -15,7 +15,7 @@ import Effect.Aff (Milliseconds(..), delay)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
 import Effect.Ref (Ref, modify, new, read, write)
-import HTTPure (Headers, Method(..), Request, ResponseM, ServerM, badRequest, conflict, created, headers, noContent, notFound, ok', serve, toString, (!@))
+import HTTPure (Headers, Method(..), Request, ResponseM, ServerM, badRequest, conflict, created, headers, internalServerError, noContent, notFound, ok', serve, toString, (!@))
 import RDF (Graph, blankNode, defaultGraph, literalLang, namedNode, quad, serialize, triple)
 import RDFPS.NTriplesParser (parse)
 import RobotArm (D, a, b, e, s0)
@@ -57,8 +57,10 @@ router state { path: ["events"], method: Get } = ok' ntHeader (serialize $ rdfFo
 router state { path, method: Get }
   | path !@ 0 == "tasks" && not (path !@ 1 == "") = do
     { tasks } <- liftEffect $ read state
-    case find (\(Tuple idx _) -> path !@ 1 == idx) tasks of 
-      Just task -> ok' ntHeader (serialize $ rdfForTask baseURI task)
+    case findIndex (\(Tuple idx _) -> path !@ 1 == idx) tasks of 
+      Just taskListIdx -> case tasks !! taskListIdx of
+        Just task -> ok' ntHeader (serialize $ rdfForTask baseURI taskListIdx task)
+        Nothing -> internalServerError $ "TaskList index " <> show taskListIdx <> " not present but should be!"
       Nothing -> notFound
 router state { path, method: Put, body }
   | path !@ 0 == "tasks" && not (path !@ 1 == "") = do
@@ -94,5 +96,5 @@ g = fromFoldable [
 
 main :: ServerM
 main = do
-  config <- new { config: Tuple s0 { pos: 1, closed: true, item: false }, tasks: (Tuple "task2" (Tuple a TaskFailed)) : (Tuple "task1" (Tuple b TaskFailed)) : Nil, events: Nil }
+  config <- new { config: Tuple s0 { pos: 1, closed: true, item: false }, tasks: (Tuple "task1" (Tuple a TaskFailed)) : (Tuple "task2" (Tuple b TaskFailed)) : Nil, events: Nil }
   serve 8080 (router config) $ log "Started server at http://localhost:8080/."
