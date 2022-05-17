@@ -3,14 +3,15 @@ module EFSMRDFMap where
 import Prelude
 
 import Control.Alternative (guard)
+import Data.DateTime (DateTime)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Set (filter, findMax, fromFoldable, size, union)
 import Data.Tuple (Tuple(..))
-import EFSM (EFSMConfig, Input, Variables)
-import RDF (Graph, Quad, Term, defaultGraph, literalType, namedNode, namedNode', object, predicate, quad, subject, termToBoolean, termToInt, termType, value)
+import EFSM (EFSMConfig, Input, Output, Variables)
+import RDF (Graph, Quad, Term, dateTimeToTerm, defaultGraph, literalType, namedNode, namedNode', object, predicate, quad, subject, termToBoolean, termToInt, termType, value)
 import RDF.Prefixes (ldp, ra, rdf, xsd)
-import RobotArm (D, a, b, c, d)
+import RobotArm (D, a, b, c, d, p)
 
 data TaskState = TaskAccepted | TaskRunning | TaskSuccessful | TaskFailed
 derive instance eqTaskState :: Eq TaskState
@@ -54,10 +55,26 @@ rdfForTask base taskListIdx (Tuple idx (Tuple input taskState)) = fromFoldable [
     state TaskSuccessful = namedNode' ra "successful"
     state TaskFailed = namedNode' ra "failed"
 
-rdfForEvents :: String -> Graph
-rdfForEvents base = fromFoldable [
+rdfForEvents :: String -> List (Tuple Int (Tuple DateTime Output)) -> Graph
+rdfForEvents base events = union (fromFoldable [
   quad (namedNode $ base <> "events/") (namedNode' rdf "type") (namedNode' ra "EventContainer") defaultGraph
+]) (fromFoldable $ eventsToContainsQuads base events)
+  where
+    eventsToContainsQuads :: String -> List (Tuple Int (Tuple DateTime Output)) -> List Quad
+    eventsToContainsQuads base' ((Tuple idx _) : is) =
+      (quad (namedNode $ base <> "events/") (namedNode' ldp "contains") (namedNode $ base <> "events/" <> show idx) defaultGraph)
+      : eventsToContainsQuads base' is
+    eventsToContainsQuads _ Nil = Nil
+
+rdfForEvent :: String -> Int -> Tuple Int (Tuple DateTime Output) -> Graph
+rdfForEvent base eventListIdx (Tuple idx (Tuple time output)) = fromFoldable [
+  quad (namedNode $ base <> "events/" <> show idx) (namedNode' rdf "type") (eventType output) defaultGraph,
+  quad (namedNode $ base <> "events/" <> show idx) (namedNode' ra "eventTime") (dateTimeToTerm time) defaultGraph,
+  quad (namedNode $ base <> "events/" <> show idx) (namedNode' ra "eventNumber") (literalType (show eventListIdx) (namedNode' xsd "integer")) defaultGraph
 ]
+  where
+    eventType :: Output -> Term
+    eventType output' = if output' == p then namedNode' ra "DeliveredItemEvent" else namedNode' ra "Event"
 
 armForRdf :: String -> Graph -> Maybe (Variables D)
 armForRdf base g = if correctSize && correctType then do

@@ -3,26 +3,28 @@ module Main where
 import Prelude
 
 import Control.Monad.State (runState)
+import Data.DateTime (DateTime)
 import Data.Either (Either(..))
 import Data.Foldable (maximum)
-import Data.List (List(..), findIndex, snoc, updateAt, (!!), (:))
+import Data.List (List(..), findIndex, snoc, updateAt, (!!))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import EFSM (EFSMConfig, Input, Output, epsilon, processInput, updateVariables)
-import EFSMRDFMap (TaskState(..), armForRdf, rdfForArm, rdfForEvents, rdfForTask, rdfForTasks, taskForRdf)
+import EFSMRDFMap (TaskState(..), armForRdf, rdfForArm, rdfForEvent, rdfForEvents, rdfForTask, rdfForTasks, taskForRdf)
 import Effect.Aff (Aff, Milliseconds(..), delay, runAff_)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
+import Effect.Now (nowDateTime)
 import Effect.Random (random)
 import Effect.Ref (Ref, modify, new, read, write)
 import Effect.Timer (setTimeout)
 import HTTPure (Headers, Method(..), Request, Response, ResponseM, ServerM, badRequest, conflict, created, headers, internalServerError, noContent, notFound, ok', serve, toString, (!@))
 import RDF (serialize)
 import RDFPS.NTriplesParser (parse)
-import RobotArm (D, a, b, e, s0)
+import RobotArm (D, e, s0)
 import Text.Parsing.Parser (parseErrorMessage)
 
-type ServerState = Record ( config :: EFSMConfig D, tasks :: List (Tuple String (Tuple Input TaskState)), events :: List (Tuple Int Output) )
+type ServerState = Record ( config :: EFSMConfig D, tasks :: List (Tuple String (Tuple Input TaskState)), events :: List (Tuple Int (Tuple DateTime Output)) )
 
 baseURI :: String
 baseURI = "http://localhost:8080/"
@@ -58,7 +60,9 @@ router state { path: ["tasks"], method: Get } = do
   { tasks } <- liftEffect $ read state
   ok' ntHeader (serialize $ rdfForTasks baseURI tasks)
 -- Get event container
-router state { path: ["events"], method: Get } = ok' ntHeader (serialize $ rdfForEvents baseURI)
+router state { path: ["events"], method: Get } = do
+  { events } <- liftEffect $ read state
+  ok' ntHeader (serialize $ rdfForEvents baseURI events)
 -- Get a specific task
 router state { path, method: Get }
   | path !@ 0 == "tasks" && not (path !@ 1 == "") = do
@@ -67,6 +71,15 @@ router state { path, method: Get }
       Just taskListIdx -> case tasks !! taskListIdx of
         Just task -> ok' ntHeader (serialize $ rdfForTask baseURI taskListIdx task)
         Nothing -> internalServerError $ "TaskList index " <> show taskListIdx <> " not present but should be!"
+      Nothing -> notFound
+-- Get a specific event
+router state { path, method: Get }
+  | path !@ 0 == "events" && not (path !@ 1 == "") = do
+    { events } <- liftEffect $ read state
+    case findIndex (\(Tuple idx _) -> path !@ 1 == show idx) events of 
+      Just eventListIdx -> case events !! eventListIdx of
+        Just event -> ok' ntHeader (serialize $ rdfForEvent baseURI eventListIdx event)
+        Nothing -> internalServerError $ "EventList index " <> show eventListIdx <> " not present but should be!"
       Nothing -> notFound
 -- Put a task
 router state { path, method: Put, body }
@@ -102,9 +115,10 @@ runEpsilons state = do
   { config, tasks, events } <- liftEffect $ read state
   let (Tuple (Tuple success output) config') = runState (epsilon e) config
   if success then delay $ Milliseconds 5000.0 else pure unit
+  now <- liftEffect $ nowDateTime
   let events' = case output of
         Nothing -> events
-        Just o -> snoc events (Tuple (findNextEventIdx events) o)
+        Just o -> snoc events (Tuple (findNextEventIdx events) (Tuple now o))
   liftEffect $ write { config: config', tasks: tasks, events: events' } state
   pure unit
 
@@ -124,10 +138,11 @@ runTasks state = do
                 Just t -> t
           liftEffect $ write { config: config, tasks: tasks', events: events } state
           delay $ Milliseconds 5000.0
+          now <- liftEffect $ nowDateTime
           let (Tuple (Tuple success output) config') = runState (processInput e input') config
           let events' = case output of
                 Nothing -> events
-                Just o -> snoc events (Tuple (findNextEventIdx events) o)
+                Just o -> snoc events (Tuple (findNextEventIdx events) (Tuple now o))
           let tasks'' = case updateAt idx' (Tuple taskId (Tuple input' (if success then TaskSuccessful else TaskFailed))) tasks of 
                 Nothing -> tasks
                 Just t -> t
@@ -135,13 +150,13 @@ runTasks state = do
           pure unit
   pure unit
 
-findNextEventIdx :: List (Tuple Int Output) -> Int
+findNextEventIdx :: List (Tuple Int (Tuple DateTime Output)) -> Int
 findNextEventIdx events = case maximum $ map (\(Tuple i _) -> i) events of 
   Nothing -> 0
   Just i -> i + 1
 
 main :: ServerM
 main = do
-  state <- new { config: Tuple s0 { pos: 1, closed: true, item: false }, tasks: (Tuple "task1" (Tuple a TaskFailed)) : (Tuple "task2" (Tuple b TaskFailed)) : Nil, events: Nil }
+  state <- new { config: Tuple s0 { pos: 1, closed: true, item: false }, tasks: Nil, events: Nil }
   _ <- liftEffect $ setTimeout 500 $ runAff_ (\_ -> pure unit) $ runTasksAndEpsilons state
   serve 8080 (router state) $ log "Started server at http://localhost:8080/."

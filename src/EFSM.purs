@@ -4,7 +4,6 @@ import Prelude
 
 import Control.Monad.State (State, get, put)
 import Data.Array (concatMap, find, mapMaybe)
-import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Set (Set, fromFoldable)
 import Data.Tuple (Tuple(..))
