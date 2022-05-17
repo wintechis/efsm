@@ -82,7 +82,7 @@ ts = [
     s1 /\ f1 /\ Just b /\ unit  ==> s2 /\ u3 /\ Nothing /\ unit,
     s2 /\ f1 /\ Just d /\ unit  ==> s1 /\ u2 /\ Nothing /\ unit,
     s2 /\ f3 /\ Nothing /\ unit ==> s5 /\ u4 /\ Nothing /\ unit,
-    s3 /\ f3 /\ Nothing /\ unit ==> s0 /\ u5 /\ Nothing /\ unit,
+    s3 /\ f3 /\ Nothing /\ unit ==> s0 /\ u5 /\ Just p /\ unit,
     s3 /\ f1 /\ Just a /\ unit  ==> s4 /\ u2 /\ Nothing /\ unit,
     s4 /\ f1 /\ Just c /\ unit  ==> s3 /\ u1 /\ Nothing /\ unit,
     s4 /\ f1 /\ Just b /\ unit  ==> s5 /\ u3 /\ Nothing /\ unit,
