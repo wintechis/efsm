@@ -36,6 +36,10 @@ ntHeader = headers [
 ]
 
 router :: Ref ServerState -> Request -> ResponseM
+-- JSON
+router state { path: ["json"], method: Get } = do
+  { config: Tuple _ vars } <- liftEffect $ read state
+  ok' (headers [ Tuple "Content-Type" "application/json", Tuple "Access-Control-Allow-Origin" "*"]) ("{\"pos\":" <> show vars.pos <> ",\"closed\":" <> show vars.closed <> ",\"item\":" <> show vars.item <> "}")
 -- Get arm state
 router state { path: [], method: Get } = do
   { config } <- liftEffect $ read state

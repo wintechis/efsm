@@ -2,17 +2,9 @@ module RobotArm where
 
 import Prelude
 
-import Control.Monad.State (runState)
-import Data.Foldable (find)
-import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
-import Data.Set (fromFoldable)
-import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import EFSM (AdmissibilityFunction, EFSM(..), EnablingFunction, Input(..), Output(..), SymbolicState(..), Transitions, UpdateFunction, Variables, inputSet, processInput, updateVariables, (==>))
-import Effect (Effect)
-import Effect.Console (logShow)
-import RDF (Graph, datatype, literalType, namedNode, object, predicate, subject, termType, triple, value)
+import EFSM (AdmissibilityFunction, EFSM(..), EnablingFunction, Input(..), Output(..), SymbolicState(..), Transitions, UpdateFunction, (==>))
 
 -- S
 s0 :: SymbolicState
@@ -103,34 +95,3 @@ a1 _ _ = false
 -- E
 e :: EFSM D
 e = EFSM ts a1
-
-variablesToRdf :: Variables D -> Graph
-variablesToRdf { pos, closed, item } = fromFoldable [
-  triple (namedNode "http://localhost:8080/") (namedNode "http://www.w3.org/2001/XMLSchema#") (namedNode "http://example.org/RobotArm"),
-  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/pos") (literalType (show pos) (namedNode "http://www.w3.org/2001/XMLSchema#integer")),
-  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/closed") (literalType (show closed) (namedNode "http://www.w3.org/2001/XMLSchema#boolean")),
-  triple (namedNode "http://localhost:8080/") (namedNode "http://example.org/item") (literalType (show item) (namedNode "http://www.w3.org/2001/XMLSchema#boolean"))
-]
-
-rdfToVariables :: Graph -> Maybe (Variables D)
-rdfToVariables g = do
-  posString <- getPos g
-  pos <- fromString posString
-  closedString <- getClosed g
-  closed <- Just (closedString == "true")
-  itemString <- getItem g
-  item <- Just (itemString == "true")
-  pure { pos: pos, closed: closed, item: item }
-  where
-    getPos :: Graph -> Maybe String
-    getPos g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/pos" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#integer")) g'
-    getClosed g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/closed" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
-    getItem g' = value <$> object <$> find (\q -> (subject q) == namedNode "http://localhost:8080/" && (predicate q) == namedNode "http://example.org/item" && (termType $ object q) == "Literal" && (datatype $ object q) == Just (namedNode "http://www.w3.org/2001/XMLSchema#boolean")) g'
-
-main :: Effect Unit
-main = do
-  logShow $ inputSet e
-  logShow $ runState (updateVariables e { pos: 1, closed: true, item: false }) (Tuple s0 { pos: 1, closed: false, item: false })
-  logShow $ runState (updateVariables e { pos: 2, closed: true, item: false }) (Tuple s0 { pos: 1, closed: false, item: false })
-  logShow $ runState (processInput e a) (Tuple s0 { pos: 1, closed: false, item: false})
-  logShow $ runState (processInput e b) (Tuple s0 { pos: 1, closed: false, item: false})
