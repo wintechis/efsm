@@ -17,3 +17,7 @@ There is a Robot Arm example defined in `src/RobotArm.purs`. You can run it usin
 
 ## Further Information
 [A RESTful Interaction Model for Semantic Digital Twins](https://solid.ti.rw.fau.de/public/2022/A_RESTful_Interaction_Model_for_Semantic_Digital_Twins.pdf)
+
+## Acknowledgments
+
+This work was partially funded by the German Federal Ministry of Education and Research through the MOSAIK project (grant no. 01IS18070A).
