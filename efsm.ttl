@@ -1,0 +1,82 @@
+@prefix xfsm: <https://ex.org/> .
+@prefix td: <https://www.w3.org/2019/wot/td#> .
+@prefix jsonschema: <https://www.w3.org/2019/wot/json-schema#> .
+@prefix hctl: <https://www.w3.org/2019/wot/hypermedia#> .
+
+<#lamp> a td:Thing ;
+    td:hasPropertyAffordance _:power, _:brightness ;
+    td:hasActionAffordance _:turnOn, _:turnOff .
+
+_:power a td:PropertyAffordance, jsonschema:IntegerSchema ;
+    td:title "Brightness" ;
+    jsonschema:minimum 0 ;
+    jsonschema:maximum 100 ;
+    td:hasForm [
+        hctl:hasTarget <https://ti.rw.fau.de/devices/helga/brightness>
+    ] ;
+    td:isObservable false .
+    
+_:brightness a td:PropertyAffordance, jsonschema:BooleanSchema ;
+        td:title "Power" ;
+        td:hasForm [
+            hctl:hasTarget <https://ti.rw.fau.de/devices/helga/power>
+        ] ;
+        td:isObservable false .
+
+_:turnOn a td:ActionAffordance ;
+    td:title "Turn On" ;
+    td:hasForm [
+        hctl:hasTarget <https://ti.rw.fau.de/devices/helga/turnOn>
+    ]
+
+_:turnOff a td:ActionAffordance ;
+    td:title "Turn Off" ;
+    td:hasForm [
+        hctl:hasTarget <https://ti.rw.fau.de/devices/helga/turnOff>
+    ]
+
+<#xfsm> a xfsm:Xfsm ;
+    xfsm:hasState <#s0>, <#s1> .
+
+<#s0> a xfsm:State ;
+    xfsm:nr 0 ;
+    xfsm:admissibilityFunction [
+        a xfsm:Equality ;
+        xfsm:parameters _:power, false
+    ], [
+        a xfsm:Equality ;
+        xfsm:parameters _:brightness, 0
+    ] ;
+    xfsm:outgoingTransitions <#t1> .
+
+<#s1> a xfsm:State ;
+    xfsm:nr 1 ;
+    xfsm:admissibilityFunction [
+        a xfsm:Equality ;
+        xfsm:parameter _:power, true
+    ] ;
+    xfsm:outgoingTransitions <#t2> .
+
+<#t1> a xfsm:Transition ;
+    xfsm:enablingFunction [
+        a xfsm:Constant ;
+        xfsm:parameter true
+    ] ;
+    xfsm:input _:turnOn ;
+    xfsm:updateTransformation [
+        xfsm:variable _:power ;
+        xfsm:value true
+    ] ;
+    xfsm:output xfsm:epsilon .
+
+<#t2> a xfsm:Transition ;
+    xfsm:enablingFunction [
+        a xfsm:Constant ;
+        xfsm:parameter true
+    ] ;
+    xfsm:input _:turnOff ;
+    xfsm:updateTransformation [
+        xfsm:variable _:power ;
+        xfsm:value false
+    ] ;
+    xfsm:output xfsm:epsilon .
